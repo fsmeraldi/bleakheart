@@ -162,7 +162,7 @@ class HeartRate:
         if rr_intervals:
             payload['rr']=[]
             for i in range(offset, len(data), 2):
-                rr = int.from_bytes(data[offset:offset+2],
+                rr = int.from_bytes(data[i:i+2],
                                     'little', signed=False)
                 # Polar H7, H9, and H10 record RR intervals
                 # in 1024-th parts of a second. Convert this
