@@ -6,8 +6,6 @@ authors:
     orcid: https://orcid.org/0000-0002-0057-8940
 title: "BleakHeart"
 version: 0.1.1
-identifiers:
-  - type: doi
-    value: 10.5281/zenodo.10992865
+doi: 10.5281/zenodo.10992865
 date-released: 2024-01-16
 url: "https://github.com/fsmeraldi/bleakheart"
