@@ -15,13 +15,20 @@ from bleak import BleakScanner, BleakClient
 sys.path.append('../')
 from bleakheart import PolarMeasurementData 
 
-
+# Due to asyncio limitations on Windows, one cannot use loop.add_reader
+# to handle keyboard input; we use threading instead. See
+# https://docs.python.org/3.11/library/asyncio-platforms.html
+if sys.platform=="win32":
+    from threading import Thread
+    add_reader_support=False
+else:
+    add_reader_support=True
+    
 async def scan():
     """ Scan for a Polar device. """
     device= await BleakScanner.find_device_by_filter(
         lambda dev, adv: dev.name and "polar" in dev.name.lower())
     return device
-
 
 
 async def run_ble_client(device, queue):
@@ -30,19 +37,23 @@ async def run_ble_client(device, queue):
     data to the queue. The tasks terminates when the sensor disconnects 
     or the user hits enter. """
 
-    
-    def keyboard_handler():
-        """ Called by the asyncio loop when the user hits Enter """
+    def keyboard_handler(loop=None):
+        """ Called by the asyncio loop when the user hits Enter, 
+        or run in a separate thread (if no add_reader support). In 
+        this case, the event loop is passed as an argument """
         input() # clear input buffer
         print (f"Quitting on user command")
-        quitclient.set() # causes the ble client task to exit
-
+        # causes the client task to exit
+        if loop==None:
+            quitclient.set() # we are in the event loop thread
+        else:
+            # we are in a separate thread - call set in the event loop thread
+            loop.call_soon_threadsafe(quitclient.set)
     
     def disconnected_callback(client):
         """ Called by BleakClient if the sensor disconnects """
         print("Sensor disconnected")
         quitclient.set() # causes the ble client task to exit
-
 
     # we use this event to signal the end of the client task
     quitclient=asyncio.Event()
@@ -59,10 +70,15 @@ async def run_ble_client(device, queue):
         print("Request for available ECG settings returned the following:")
         for k,v in settings.items():
             print(f"{k}:\t{v}")
-        # Set the loop to call keyboard_handler when one line of input is
-        # ready on stdin
         loop=asyncio.get_running_loop()
-        loop.add_reader(sys.stdin, keyboard_handler)
+        if add_reader_support:
+            # Set the loop to call keyboard_handler when one line of input is
+            # ready on stdin
+            loop.add_reader(sys.stdin, keyboard_handler)
+        else:
+            # run keyboard_handler in a daemon thread
+            Thread(target=keyboard_handler, kwargs={'loop': loop},
+                   daemon=True).start()
         print(">>> Hit Enter to exit <<<")
         # start notifications; bleakheart will start pushing
         # data to the queue we passed to PolarMeasurementData
@@ -78,7 +94,8 @@ async def run_ble_client(device, queue):
         # it's easy to stop them if we want to
         if client.is_connected:
             await pmd.stop_streaming('ECG')
-        loop.remove_reader(sys.stdin)
+        if add_reader_support:
+            loop.remove_reader(sys.stdin)
         # signal the consumer task to quit
         queue.put_nowait(('QUIT', None, None, None))
 
