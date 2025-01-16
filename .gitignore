@@ -1,3 +1,5 @@
+.DS_Store
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -8,3 +10,35 @@ __pycache__/
 
 # Virtual environment
 venv/
+
+
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw*
+
+# py cache
+*__pycache__*
+*.pyc
+*.egg*
+
+#misc
+*.fuse*
+*.tar*
+*.zip
+
+*.bbox*
+
+sqlite*bk
+
+data
+wsdata
+
+htmlcov
+.coverage
+build
+
