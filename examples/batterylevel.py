@@ -9,8 +9,6 @@ Copyright (C) 2023 Fabrizio Smeraldi <fabrizio@smeraldi.net>
 import sys
 import asyncio
 from bleak import BleakScanner, BleakClient
-# Allow importing bleakheart from parent directory
-sys.path.append('../')
 from bleakheart import BatteryLevel
 
 

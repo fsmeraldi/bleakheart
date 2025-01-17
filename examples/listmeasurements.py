@@ -12,8 +12,6 @@ PolarMeasurementData API """
 import sys
 import asyncio
 from bleak import BleakScanner, BleakClient
-# Allow importing bleakheart from parent directory
-sys.path.append('../')
 from bleakheart import PolarMeasurementData 
 
 

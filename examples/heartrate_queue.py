@@ -12,8 +12,6 @@ producer/consumer model """
 import sys
 import asyncio
 from bleak import BleakScanner, BleakClient
-# Allow importing bleakheart from parent directory
-sys.path.append('../')
 from bleakheart import HeartRate
 
 # Due to asyncio limitations on Windows, one cannot use loop.add_reader
