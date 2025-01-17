@@ -6,8 +6,11 @@ BleakHeart is written in Python using the [asyncio](https://docs.python.org/3/li
 
 ## Installation
 
-Place the ```bleakheart.py``` file in the same directory as your program, or in a directory in your ```PYTHONPATH```.
-BleakHeart requires [Bleak](https://bleak.readthedocs.io/en/latest/#); the current version was tested with Bleak v0.20.2.
+Install using ```pip```:
+```
+pip install git+https://github.com/fsmeraldi/bleakheart.git
+```
+BleakHeart requires [Bleak](https://bleak.readthedocs.io/en/latest/#); this dependency will be installed automatically.
 
 ## Features
 
@@ -28,12 +31,20 @@ Please see the examples directory for detailed examples of some of the possible 
 
 ## Limitations
 
-BleakHeart has only been tested on a Polar H10 chest strap (under Linux), since that is what I have available. Other Polar devices are only partly supported; measurements other than ECG and acceleration are returned as raw bytearrays. Offline recording to the internal Polar H10 memory is not supported.
+BleakHeart has mainly been tested on a Polar H10 chest strap (under Linux), since that is what I have available. However, reports from Windows and MacOS users have been positive. Other Polar devices are only partly supported; measurements other than ECG and acceleration are returned as raw bytearrays. Offline recording to the internal Polar H10 memory is not supported.
 
 ## Credits and contributing
 
-This software was developed by [Fabrizio Smeraldi](http://www.eecs.qmul.ac.uk/~fabri/).
-If you would like to contribute, please [get in touch](mailto:fabrizio@smeraldi.net).
+This software was originally developed and is maintained by [Fabrizio Smeraldi](http://www.eecs.qmul.ac.uk/~fabri/). Many thanks to 
+
+* Alex Ong - [alex-ong](https://github.com/alex-ong),
+* Chris Spooner - [Chris-Spooner999](https://github.com/Chris-Spooner999),
+* Fareza - [farezae](https://github.com/farezae),
+* Léo Flaventin Hauchecorne - [hl037](https://github.com/hl037),
+* Wesley Huff - [HufflyCodes](https://github.com/HufflyCodes),
+* Will Powell - [WillPowellUK](https://github.com/WillPowellUK)
+
+for testing, suggestions and code. If you would like to contribute, please [get in touch](mailto:fabrizio@smeraldi.net).
 
 ## Academic use
 
