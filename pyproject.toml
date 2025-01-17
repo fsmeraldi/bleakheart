@@ -4,18 +4,19 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bleakheart"
-version = "0.1.2"
 authors = [
-  { name="Fabrizio Smeraldi" },
+  { name="Fabrizio Smeraldi", email="fabrizio@smeraldi.net" },
 ]
-description = ""
+description = "An asynchronous BLE Heart Monitor library with support for additional data from Polar monitors (ECG, accelerometers, etc)"
 readme = "README.md"
 requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)"
 ]
 license= {text="MPL-2.0"}
-dynamic = ["dependencies"]
+dynamic = ["dependencies", "version"]
 
 [project.urls]
 Homepage="https://github.com/fsmeraldi/bleakheart"
@@ -26,4 +27,3 @@ Repository="https://github.com/fsmeraldi/bleakheart.git"
 
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
-
