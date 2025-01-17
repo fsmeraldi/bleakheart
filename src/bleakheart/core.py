@@ -6,8 +6,6 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 Copyright (C) Fabrizio Smeraldi - fabrizio@smeraldi.net, 2023
 """
 
-__version__ = "0.1.2"
-
 import asyncio as aio
 from time import time_ns
 from collections import defaultdict
