@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=66.1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bleakheart"
+version = "0.1.2"
+authors = [
+  { name="Fabrizio Smeraldi" },
+]
+description = ""
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+license= {text="MPL-2.0"}
+dynamic = ["dependencies"]
+
+[project.urls]
+Homepage="https://github.com/fsmeraldi/bleakheart"
+Repository="https://github.com/fsmeraldi/bleakheart.git"
+
+[project.scripts]
+#script_name = "module.submodule:function"
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
