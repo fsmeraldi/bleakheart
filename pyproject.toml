@@ -15,7 +15,7 @@ classifiers = [
     "Operating System :: OS Independent",
     "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)"
 ]
-license= {text="MPL-2.0"}
+license= {file="LICENSE"}
 dynamic = ["dependencies", "version"]
 
 [project.urls]
@@ -27,3 +27,4 @@ Repository="https://github.com/fsmeraldi/bleakheart.git"
 
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
+version={attr="bleakheart._version.__version__"}
