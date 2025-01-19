@@ -6,11 +6,10 @@ BleakHeart is written in Python using the [asyncio](https://docs.python.org/3/li
 
 ## Installation
 
-Install using ```pip```:
+Install from PyPI using ```pip```:
 ```
-pip install git+https://github.com/fsmeraldi/bleakheart.git
+python3 -m pip install "bleakheart"
 ```
-BleakHeart requires [Bleak](https://bleak.readthedocs.io/en/latest/#); this dependency will be installed automatically.
 
 ## Features
 
