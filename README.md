@@ -17,7 +17,8 @@ python3 -m pip install "bleakheart"
 * Reads Accelerometer and ECG signals from the Polar H10 chest strap; 
 * Offers partial support for measurements available from other Polar devices through the Polar Measurement Data interface;
 * Normalises Polar sensor timestamps to Epoch time; 
-* Reads the battery charge state through the standard BLE [battery service](https://www.bluetooth.com/specifications/specs/battery-service/) (also available on other types of BLE devices).
+* Reads the battery charge state through the standard BLE [battery service](https://www.bluetooth.com/specifications/specs/battery-service/) (also available on other types of BLE devices);
+* Compatible with Jupyter Notebooks (IPython version 7+, IPykernel version 5+).
 
 ## Usage
 
@@ -26,7 +27,7 @@ BleakHeart supports a variety of software design choices. Specifically:
 * Alternatively, data can be sent to a callback. Simple tasks such as sensor logging can be accomplished with only a minimal understanding of ```asyncio```;
 * All data are tagged with their measurement type; thus the same queue or callback can be used to handle different types of measurements if desired.
 
-Please see the examples directory for detailed examples of some of the possible workflows, and use the ```help``` function on BleakHeart objects for more information.
+Please see the [getting_started](examples/getting_started.ipynb) notebook in the examples directory, that also contains detailed stand-alone examples for some of the possible workflows. Use the ```help``` function on BleakHeart objects for more information.
 
 ## Limitations
 
