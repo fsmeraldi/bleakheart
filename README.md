@@ -29,7 +29,7 @@ BleakHeart supports a variety of software design choices. Specifically:
 
 Please see the [getting_started](examples/getting_started.ipynb) notebook in the examples directory, or click on the image below for a video introduction. 
 
-[![Getting Started](screenshot.png)](https://youtu.be/WzNl-cQH7HU  "Getting Started")
+[![Getting Started](screenshot.png | width=800)](https://youtu.be/WzNl-cQH7HU  "Getting Started")
 
 The examples directory also contains detailed stand-alone examples for some of the possible workflows. Use the ```help``` function on BleakHeart objects for more information.
 
