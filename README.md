@@ -27,7 +27,11 @@ BleakHeart supports a variety of software design choices. Specifically:
 * Alternatively, data can be sent to a callback. Simple tasks such as sensor logging can be accomplished with only a minimal understanding of ```asyncio```;
 * All data are tagged with their measurement type; thus the same queue or callback can be used to handle different types of measurements if desired.
 
-Please see the [getting_started](examples/getting_started.ipynb) notebook in the examples directory, that also contains detailed stand-alone examples for some of the possible workflows. Use the ```help``` function on BleakHeart objects for more information.
+Please see the [getting_started](examples/getting_started.ipynb) notebook in the examples directory, or click on the image below for a video introduction. 
+
+[![Getting Started](screenshot.png)](https://youtu.be/WzNl-cQH7HU  "Getting Started")
+
+The examples directory also contains detailed stand-alone examples for some of the possible workflows. Use the ```help``` function on BleakHeart objects for more information.
 
 ## Limitations
 
