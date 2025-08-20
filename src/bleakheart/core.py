@@ -262,11 +262,14 @@ class PolarMeasurementData:
     PMDDATAMTU="FB005C82-02E7-F387-1CAD-8ACD2D8DF0C8"
     
     # electrocardiogram, photoplethysmography, acceleration,
-    # peak to peak interval, gyroscope, magnetometer.
-    measurement_types=['ECG', 'PPG', 'ACC', 'PPI', 'rfu', 'GYRO', 'MAG']
+    # peak to peak interval, gyroscope, magnetometer. SDK enters
+    # the SDK mode on the Verity
+    measurement_types=['ECG', 'PPG', 'ACC', 'PPI', 'rfu', 'GYRO', 'MAG',
+                       'rfu', 'rfu', 'SDK']
     # 'rfu' = reserved for future use. Use list.index() to get the code
     # for each string.
     op_codes={'GET':0x01, 'START': 0x02, 'STOP': 0x03}
+    # All of these are encoded over 2 bytes except CHANNELS (1 byte)
     settings=['SAMPLE_RATE', 'RESOLUTION', 'RANGE', 'rfu', 'CHANNELS']
     # Choice of default settings for measurements supported by Polar H10.
     # Sampling rate is in Hz, Resolution in bit, Range in multiples of G.
@@ -521,11 +524,12 @@ class PolarMeasurementData:
                 parname=self.settings[data[offset]]
                 howmany=data[offset+1]
                 offset+=2
+                wlen=2 if parname!='CHANNELS' else 1
                 for i in range(howmany):
-                    val=int.from_bytes(data[offset:offset+2],
+                    val=int.from_bytes(data[offset:offset+wlen],
                                        'little', signed=False)
                     params[parname].append(val)
-                    offset+=2
+                    offset+=wlen
         except IndexError:
             raise RuntimeError("PMD response has wrong length")
         return params
@@ -553,7 +557,8 @@ class PolarMeasurementData:
         for s,v in params.items():
             req.extend([self.settings.index(s),
                         0x01]) # array length
-            req.extend(v.to_bytes(2, 'little', signed=False))
+            wlen=2 if s!='CHANNELS' else 1
+            req.extend(v.to_bytes(wlen, 'little', signed=False))
         try:
             response=await self._pmd_ctrl_request(req)
         except aio.TimeoutError:
