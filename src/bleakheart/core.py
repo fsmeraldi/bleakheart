@@ -276,7 +276,9 @@ class PolarMeasurementData:
     # Sampling rate is in Hz, Resolution in bit, Range in multiples of g.
     default_settings={'ECG': {'SAMPLE_RATE': 130, 'RESOLUTION': 14},
                       'ACC': {'SAMPLE_RATE': 200, 'RESOLUTION': 16,
-                              'RANGE': 2 }}
+                              'RANGE': 2 },
+                      'PPG': {'SAMPLE_RATE':  55, 'RESOLUTION': 22,
+                              'CHANNELS': 4}}
     # these are Polar sensor errors; bleakheart errors will use negative
     # error codes
     error_msgs=['SUCCESS', 'INVALID OP CODE', 'INVALID MEASUREMENT TYPE',
@@ -623,7 +625,8 @@ class PolarMeasurementData:
 
         Returns:
             A list of available measurements; for the H10 strap this should 
-            be ['ECG', 'ACC'] 
+            be ['ECG', 'ACC'], for the Verity ['PPG', 'ACC', 'PPI', 'GYRO',
+            'MAG']
 
         Raises:
             A RuntimeError is raised in case of invalid read response from
