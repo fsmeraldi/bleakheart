@@ -410,7 +410,7 @@ class PolarMeasurementData:
                 await self._acc_callback(('ACC', timestamp, payload))
             else:
                 self._acc_callback(('ACC', timestamp, payload))
-        elif (meas=='PPG') and (frametype==9):
+        elif (meas=='PPG') and (frametype==128):
             payload=self._decode_ppg_data(data)
             if self._ppg_callback_is_coro:
                     await self._ppg_callback(('PPG',timestamp,payload))
