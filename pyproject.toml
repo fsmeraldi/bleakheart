@@ -7,7 +7,7 @@ name = "bleakheart"
 authors = [
   { name="Fabrizio Smeraldi", email="fabrizio@smeraldi.net" },
 ]
-description = "An asynchronous BLE Heart Monitor library with support for additional data from Polar monitors (ECG, accelerometers, etc)"
+description = "An asynchronous BLE Heart Monitor library with support for additional data from Polar monitors (ECG, accelerometers, PPG)"
 readme = "README.md"
 requires-python = ">=3.10"
 classifiers = [
@@ -15,7 +15,7 @@ classifiers = [
     "Operating System :: OS Independent",
     "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)"
 ]
-license= {file="LICENSE"}
+license= {text="MPL-2.0"}
 dynamic = ["dependencies", "version"]
 
 [project.urls]
