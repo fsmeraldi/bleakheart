@@ -2,15 +2,15 @@
 This Source Code Form is subject to the terms of the Mozilla Public
 License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at http://mozilla.org/MPL/2.0/.
-
-Copyright (C) Fabrizio Smeraldi - fabrizio@smeraldi.net, 2023
 """
 
 import asyncio as aio
+import math
 from time import time_ns
 from collections import defaultdict
 from bleak import BleakGATTCharacteristic, BleakClient
 from inspect import iscoroutinefunction
+from warnings import warn
 
 
 class BatteryLevel:
@@ -247,32 +247,38 @@ class PolarMeasurementData:
     tstamp is the sensor time stamp in ns, and payload is the requested 
     measurement data. The time stamp is converted to standard epoch time 
     using a single offset computed at the time the first data frame is 
-    received. ECG and acceleration data (as supported by Polar H10) are 
-    decoded; other measurement data are streamed, but they are returned 
-    as raw bytearray.
+    received. ECG, acceleration data (as supported by Polar H10) and
+    photoplethysmography (Verity) are decoded; other measurement data
+    are streamed, but they are returned as raw bytearrays.
 
     Acceleration samples are returned as tuples of values along the three
     axes (x,y,z), in milliG; ECG is returned as a list of integer samples in 
     microVolt (on the H10, ECG  sampling frequency is 130Hz and encoding 
     is 14 bit). In either case, the time stamp refers to the last sample 
-    of the list constituting the payload.
+    of the list constituting the payload. PPG is returned as tuples of 4
+    samples (3 PPG channels plus an ambient light measurement).
     """
     # BLE characteristics
     PMDCTRLPOINT="FB005C81-02E7-F387-1CAD-8ACD2D8DF0C8"
     PMDDATAMTU="FB005C82-02E7-F387-1CAD-8ACD2D8DF0C8"
     
     # electrocardiogram, photoplethysmography, acceleration,
-    # peak to peak interval, gyroscope, magnetometer.
-    measurement_types=['ECG', 'PPG', 'ACC', 'PPI', 'rfu', 'GYRO', 'MAG']
+    # peak to peak interval, gyroscope, magnetometer. SDK enters
+    # the SDK mode on the Verity (confirmed by led flashing R,G,B).
+    measurement_types=['ECG', 'PPG', 'ACC', 'PPI', 'rfu', 'GYRO', 'MAG',
+                       'rfu', 'rfu', 'SDK']
     # 'rfu' = reserved for future use. Use list.index() to get the code
     # for each string.
     op_codes={'GET':0x01, 'START': 0x02, 'STOP': 0x03}
+    # All of these are encoded over 2 bytes except CHANNELS (1 byte)
     settings=['SAMPLE_RATE', 'RESOLUTION', 'RANGE', 'rfu', 'CHANNELS']
     # Choice of default settings for measurements supported by Polar H10.
-    # Sampling rate is in Hz, Resolution in bit, Range in multiples of G.
+    # Sampling rate is in Hz, Resolution in bit, Range in multiples of g.
     default_settings={'ECG': {'SAMPLE_RATE': 130, 'RESOLUTION': 14},
                       'ACC': {'SAMPLE_RATE': 200, 'RESOLUTION': 16,
-                              'RANGE': 2 }}
+                              'RANGE': 2 },
+                      'PPG': {'SAMPLE_RATE':  55, 'RESOLUTION': 22,
+                              'CHANNELS': 4}}
     # these are Polar sensor errors; bleakheart errors will use negative
     # error codes
     error_msgs=['SUCCESS', 'INVALID OP CODE', 'INVALID MEASUREMENT TYPE',
@@ -284,7 +290,8 @@ class PolarMeasurementData:
 
     def __init__(self, client: BleakClient,
                  ecg_queue:aio.Queue=None, acc_queue:aio.Queue=None,
-                 raw_queue:aio.Queue=None, callback=None):
+                 ppg_queue:aio.Queue=None, raw_queue:aio.Queue=None,
+                 callback=None):
         """" Init the PolarMeasurementData object.
 
         Args:
@@ -294,6 +301,8 @@ class PolarMeasurementData:
                    if not specified, data will be sent to the callback
         acc_queue: an asyncio queue onto which decoded acceleration data is 
                    pushed; if unspecified, data will be passed to callback
+        ppg_queue: an asyncio queue for decoded photoplethysmography data; 
+                   if unspecified, data will be passed to the callback
         raw_queue: an asyncio queue onto which all other measurement data is 
                    pushed in raw format; if not specified, data will be 
                    passed to the callback
@@ -303,14 +312,17 @@ class PolarMeasurementData:
         self.client=client
         self.ecg_queue=ecg_queue
         self.acc_queue=acc_queue
+        self.ppg_queue=ppg_queue
         self.raw_queue=raw_queue
         if callback==None:
             callback=self._no_callback
         self._ecg_callback=ecg_queue.put_nowait if ecg_queue!=None else callback
         self._acc_callback=acc_queue.put_nowait if acc_queue!=None else callback
+        self._ppg_callback=ppg_queue.put_nowait if ppg_queue!=None else callback
         self._raw_callback=raw_queue.put_nowait if raw_queue!=None else callback
         self._ecg_callback_is_coro=iscoroutinefunction(self._ecg_callback)
         self._acc_callback_is_coro=iscoroutinefunction(self._acc_callback)
+        self._ppg_callback_is_coro=iscoroutinefunction(self._ppg_callback)
         self._raw_callback_is_coro=iscoroutinefunction(self._raw_callback)
         self._ctrl_lock=aio.Lock()
         self._ctrl_recv=aio.Event() # ctrl response ready
@@ -398,6 +410,12 @@ class PolarMeasurementData:
                 await self._acc_callback(('ACC', timestamp, payload))
             else:
                 self._acc_callback(('ACC', timestamp, payload))
+        elif (meas=='PPG') and (frametype==128):
+            payload=self._decode_ppg_data(data)
+            if self._ppg_callback_is_coro:
+                    await self._ppg_callback(('PPG',timestamp,payload))
+            else:
+                self._ppg_callback(('PPG',timestamp,payload))
         else:
             # send raw data to queue or callback
             if self._raw_callback_is_coro:
@@ -429,7 +447,7 @@ class PolarMeasurementData:
 
     def _decode_acc_data(self, data):
         """ Decode acceleration data frame type 0x01 (x,y,z, 16 bit signed 
-        int, unis: mG); this is the type of frame returned by the H10 strap
+        int, units: mg); this is the type of frame returned by the H10 strap
 
         Args:
             data: the raw ACC frame from the device. Only frame type 0x01 is 
@@ -437,7 +455,7 @@ class PolarMeasurementData:
         Returns:
             A list of tuples of the form (x,y,z) where x, y, and z are 
             integers measuring the acceleration along the three axes
-            in milliG.
+            in milli-g.
         """
         if data[9]!=0x01:
             raise ValueError(f"Unsupported ACC frame type {data[9]:02x}")
@@ -451,6 +469,155 @@ class PolarMeasurementData:
             milli_g.append((x,y,z))
         return milli_g
     
+    def _parse_signed_int_from_bits(self,bit_str):
+        """ Convert bit string of any length to integer,
+        interpreting as signed. Used for decoding compressed
+        (delta) frames """
+        val = int(bit_str, 2)
+        if bit_str[0] == '1':  # if sign bit is 1
+            val -= 1 << len(bit_str)
+        return val
+    
+    def _decode_ppg_data(self,data):
+        """
+        Sample dataframe:
+        01 2d 3b ba ac ab 31 18 0b 80 bb 1a f8 7d 9b f8 94 b9 f8 df 20
+        f6 08 2a cb ea d5 e2 00 d2 de 2c cc da b6 ee f5 d5 f9 11 17 fa 
+        f1 ef bf 99 ca a7 ec 05 e2 4c e2 df e3 fe 19 31 66 36 e8 0e d6
+        c2 39 cb f6 27 da 2f 2c 11 24 ce d8 e2 ec 3e 0d 21 1e 0f f1 dd 
+        d3 8e 19 2d f9 3f be a3 07 08 f3 30 11 ee 1e 32 cd 06 11 d8 11
+        12 e0 14 19 c9 05 00 1d 39 f8 e9 97 8f bb ea 14 f9 db 0e 1c 25 
+        28 fe c7 cb d5 00 34 fc 11 fe ee 16 ff 18 de ec d0 07 e3 db ed
+        17 5a 3d 66 db c5 dc 06 f1 30 1a 9b 1a 03 34 5f 1c eb f0 fb c9 
+        0f 16 fc 3b 18 3b da 1c 1f d5 19 d1 11 11 de 08 f5 29 2a fa fc
+        0f 20 e3 0a 07 03 74 af 41 01 f2 f7 d0 bf fc 35 10 e0 c3 fc 2b 
+        88 31 00 03 0b 5c bf c2 01 2b 20 41 80 04 0d 38 50 c3 fc
+
+        Reference: https://github.com/polarofficial/polar-ble-sdk/blob/
+        master/technical_documentation/online_measurement.pdf
+
+        Header: 0:01 1:2d 2:3b 3:ba 4:ac 5:ab 6:31 7:18 8:0b 9:80
+        index   |   Type                |      data
+        0:      |   Measurement Type    |      0x01 (PPG)
+        1-8:    |   64bit timestamp     |      0x2d 0x3b 0xba 0xac 0xab
+                |                       |      0x31 0x18 0x0b
+                |                       |      (1746128349663096880)
+        9:      |   Frame Type          |      0x80 (Compressed)
+
+        Data:
+        10-21:    Reference sample ([0xbb 0x1a 0xf8] [0x7d 0x9b 0xf8]
+        [0x94 0xb9 0xf8] [0xdf 0x20 0xf6]) (ppg0,ppg1,ppg2,ambient)
+        Sample 0 (aka. reference sample):
+        Sample 0 - channel 0: bb 1a f8 => 0xf81abb => -517445
+        (note:little endian means the bit order is read right to left
+        then to convert the 3B to a signed 32B prepend 0xff if the
+        highest byte >= 0x80 meaning 0xfffd664b => -517445)
+        Sample 0 - channel 1: 7d 9b f8 => 0xf89b76 => -484490
+        Sample 0 - channel 2: 94 b9 f8 => 0xf8b994 => -476780
+        Sample 0 - channel 4: df 20 f6 => 0xf620df => -646945
+
+        Delta data: 
+        22-23: [08] [2a] [cb ea d5 e2 00 d2 ...]
+        Delta package 1 size in bits (1B): 0x08 => 8 (size of 8 bits)
+        Delta package 1 samples count (1B): 0x2a => 42 (contains 42 samples)
+        .
+        .
+        .
+        """
+        if not isinstance(data, (bytes, bytearray)):
+            raise TypeError("Expected a bytes or bytearray object")
+        
+        # Hardcoded values for the Verity Sense
+        resolution_bits = 22
+        num_channels = 4
+        header_length = 10
+        # Each sample's size in bytes based on resolution
+        bytes_per_sample = math.ceil(resolution_bits / 8)
+        # Total bytes needed for the reference frame
+        ref_frame_len = num_channels * bytes_per_sample
+
+        # Ensure the stream is long enough for the reference frame and delta
+        # header (2 bytes)
+        if len(data) < header_length + ref_frame_len + 2:
+            raise ValueError("Byte stream too short for reference frame")
+
+        # Slice out the reference frame section
+        ref_start = header_length
+        ref_end = ref_start + ref_frame_len
+        reference_frame = data[ref_start:ref_end]
+
+        # Decode each channel's initial reference value
+        channel_values = []
+        for i in range(num_channels):
+            start = i * bytes_per_sample
+            end = start + bytes_per_sample
+            sample_bytes = reference_frame[start:end]
+            # Interpret as signed little-endian integer
+            value = int.from_bytes(sample_bytes, byteorder='little',signed=True)
+            channel_values.append(value)
+
+        offset = ref_end
+        delta_frames_info = [] # Store (bit width, sample count) for each frame
+        all_delta_samples = [] # Store the decoded deltas grouped by sample
+        # print(len(channel_values))
+        decoded_ppg = [channel_values]
+        # print(decoded_ppg[0][1])
+
+        # Loop through all delta frames in the byte stream
+        while offset + 2 <= len(data):
+            bit_width = data[offset]       # Byte 22: bit width per delta value
+            sample_count = data[offset + 1]  # Byte 23: number of samples
+            offset += 2
+
+            total_bits = bit_width * num_channels * sample_count
+            total_bytes = math.ceil(total_bits / 8)
+
+            # Ensure there are enough bytes left in the stream
+            if offset + total_bytes > len(data):
+                warn("PPG: Incomplete delta frame data; "
+                      "skipping remaining.", BytesWarning)
+                break
+
+            # Read the raw delta bytes and convert them to a bit string
+            data_bytes = data[offset:offset + total_bytes]
+            offset += total_bytes
+            bit_string = ''.join(f'{byte:08b}' for byte in data_bytes)
+
+            frame_deltas = []
+
+            # Decode each sample (consisting of multiple channel deltas)
+            for sample_index in range(sample_count):
+                sample_channels = []
+                sample = []
+                # print(sample_index)
+                for channel_index in range(num_channels):
+                    i = sample_index * num_channels + channel_index
+                    start_bit = i * bit_width
+                    end_bit = start_bit + bit_width
+                    bits = bit_string[start_bit:end_bit]
+
+                    # If bits are incomplete, skip this sample
+                    if len(bits) < bit_width:
+                        warn("PPG: Incomplete sample data; "
+                             "skipping sample.", BytesWarning)
+                        break
+                    val = self._parse_signed_int_from_bits(bits)
+                    # print(type(bits))
+                    # print(decoded_ppg[0][1])
+                    ppg_val = decoded_ppg[-1][channel_index] + val
+                    sample_channels.append(val)
+                    sample.append(ppg_val)
+
+                frame_deltas.append(sample_channels)
+                decoded_ppg.append(sample)
+
+            # Store metadata and deltas for this frame
+            delta_frames_info.append((bit_width, sample_count))
+            all_delta_samples.append(frame_deltas)
+
+        return decoded_ppg
+    
+
 
     async def available_measurements(self):
         """ Reads the PMD Control Point to obtain the available
@@ -458,7 +625,8 @@ class PolarMeasurementData:
 
         Returns:
             A list of available measurements; for the H10 strap this should 
-            be ['ECG', 'ACC'] 
+            be ['ECG', 'ACC'], for the Verity ['PPG', 'ACC', 'PPI', 'GYRO',
+            'MAG']
 
         Raises:
             A RuntimeError is raised in case of invalid read response from
@@ -521,20 +689,28 @@ class PolarMeasurementData:
                 parname=self.settings[data[offset]]
                 howmany=data[offset+1]
                 offset+=2
+                wlen=2 if parname!='CHANNELS' else 1
                 for i in range(howmany):
-                    val=int.from_bytes(data[offset:offset+2],
+                    val=int.from_bytes(data[offset:offset+wlen],
                                        'little', signed=False)
                     params[parname].append(val)
-                    offset+=2
+                    offset+=wlen
         except IndexError:
             raise RuntimeError("PMD response has wrong length")
         return params
 
+    
     async def start_streaming(self, measurement, **settings):
-        """ Start streaming, check ctrl point response for errors.
-        Return a tuple with the error code (0 for success), error
+        """ Starts streaming the specified measurement,  checks ctrl point
+        response for errors. Note: passing 'SDK' as the measurement switches
+        the Verity sensor to SDK mode (onboard led will blink R,G,B).
+        
+        Returns: a tuple with the error code (0 for success), error
         message, and the raw response so that unsupported parameters
-        can be handled by the caller. """
+        can be handled by the caller.
+
+        Raises: ValueError if an invalid measurement is requested.
+        """
         try:
             meas_type=self.measurement_types.index(measurement)
         except ValueError:
@@ -553,7 +729,8 @@ class PolarMeasurementData:
         for s,v in params.items():
             req.extend([self.settings.index(s),
                         0x01]) # array length
-            req.extend(v.to_bytes(2, 'little', signed=False))
+            wlen=2 if s!='CHANNELS' else 1
+            req.extend(v.to_bytes(wlen, 'little', signed=False))
         try:
             response=await self._pmd_ctrl_request(req)
         except aio.TimeoutError:
