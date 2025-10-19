@@ -241,7 +241,7 @@ class HeartRate:
 class PolarMeasurementData:
     """ Access measurements provided through the Polar Measurement Data
     interface: Electrocardiogram, Acceleration, Photoplethysmography, 
-    Peak-to-peal Interval, Gyroscope, Magnetometer.  Data is pushed to an 
+    Peak-to-Peak Interval, Gyroscope, Magnetometer.  Data is pushed to an 
     asynchronous queue or passed to a callback as requested, in the format 
     (DTYPE, tstamp, payload). Here DTYPE is a string from measurement_types, 
     tstamp is the sensor time stamp in ns, and payload is the requested 

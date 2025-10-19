@@ -114,7 +114,7 @@ async def main():
         sys.exit(-4)
     print("After connecting, will print accelerometer data in the form")
     print(" ('ACC', tstamp, [(x1,y1,z1),(x2,y2,z2),...,(xn,yn,zn)])")
-    print("where samples (xi, yi, zi) are in milliG, tstamp is in ns")
+    print("where samples (xi, yi, zi) are in milli-g, tstamp is in ns")
     print("and it refers to the last sample (xn,yn,zn).")
     # client task will return when the user hits enter or the
     # sensor disconnects

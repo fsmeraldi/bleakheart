@@ -5,8 +5,7 @@ authors:
     given-names: Fabrizio
     orcid: https://orcid.org/0000-0002-0057-8940
 title: "BleakHeart"
-version: 0.1.3
-doi: 10.5281/zenodo.10992864
-https://doi.org/
-date-released: 2025-01-19
+version: 0.2.0
+doi: https://doi.org/10.5281/zenodo.10992864
+date-released: 2025-10-19
 url: "https://github.com/fsmeraldi/bleakheart"
