@@ -79,8 +79,9 @@ async def run_ble_client(device, callback):
         # start notifications; bleakheart will start sending data to
         # the callback. You can set parameters as desired - invalid
         # settings return an error
-        (err_code, err_msg, _) =await pmd.start_streaming('ACC', RANGE=2,
-                                                          SAMPLE_RATE=25)
+        (err_code, err_msg, response) =await pmd.start_streaming('ACC', RANGE=2,
+                                                                 SAMPLE_RATE=25)
+        print(f"Start-streaming response:{response}")
         if err_code!=0:
             print(f"PMD returned an error: {err_msg}")
             sys.exit(err_code)

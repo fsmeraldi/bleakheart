@@ -80,7 +80,8 @@ async def run_ble_client(device, queue):
         print(">>> Hit Enter to exit <<<")
         # start notifications; bleakheart will start pushing
         # data to the queue we passed to PolarMeasurementData
-        (err_code, err_msg, _)= await pmd.start_streaming('ECG')
+        (err_code, err_msg, response)= await pmd.start_streaming('ECG')
+        print(f"Start-streaming response:{response}")
         if err_code!=0:
             print(f"PMD returned an error: {err_msg}")
             sys.exit(err_code)
