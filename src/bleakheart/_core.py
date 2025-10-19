@@ -11,6 +11,7 @@ from collections import defaultdict
 from bleak import BleakGATTCharacteristic, BleakClient
 from inspect import iscoroutinefunction
 from warnings import warn
+import struct
 
 
 class BatteryLevel:
@@ -329,6 +330,7 @@ class PolarMeasurementData:
         self._ctrl_response=None
         self._notifications_started=False
         self._time_offset=None
+        self._verity_acc_factor=1.0
 
     def _no_callback(self, payload):
         """ Used to raise an error if no queue or callback has been 
@@ -739,7 +741,15 @@ class PolarMeasurementData:
             return (-2, 'Invalid CTRL point response', None)
         err_code=response[3]
         err_msg=self.error_msgs[err_code]
-        # Verity ACC reponse has FACTOR parameter, not handled here
+        # In both the H10 and the Verity response[4] is 0x00 (no more frames).
+        # In the H10 response[5] 0x00 (ecg) or 0x01 (acc) and is the last byte.
+        # In the Verity in the ACC case response[5] is 0x05 (factor) followed
+        # by 0x01 (array_length 1) and response[7:11] is the float scaling
+        # factor for delta-frame acceleration values, encoded in IEEE754
+        # format - eg 0x40 DA 7F 39 = 0.000243999995291 (will scale values
+        # to multiples of g)
+        if len(response)==11 and response[5]==0x05:
+            self._verity_acc_factor=struct.unpack(response[7:])
         return (err_code, err_msg, response)
 
 
